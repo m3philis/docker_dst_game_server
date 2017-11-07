@@ -1,12 +1,17 @@
-FROM debian:stretch
+FROM ubuntu:latest
 
 MAINTAINER M3philis <m3philis@m3philis.de>
+ENV DST_PATH=/steam
+ENV DST_CONFIG_DIR=dst_config
+ENV CLUSTER=Chaos
+ENV SHARD=Master
 
-RUN apt-get update -y \
+RUN dpkg --add-architecture i386 \
+    && apt update -y \
 		&& apt-get dist-upgrade -y \
-		&& apt-get install -y vim wget lib32gcc1
+		&& apt-get install -y wget libstdc++6:i386 libgcc1:i386 libcurl4-gnutls-dev:i386
 
-RUN mkdir -p /steam/{bin,gmod,css}
+RUN mkdir -p /steam/{bin,dst,dst_config}
 
 WORKDIR /steam/bin
 
@@ -14,11 +19,12 @@ RUN wget http://media.steampowered.com/client/steamcmd_linux.tar.gz \
 		&& tar xvzf steamcmd_linux.tar.gz
 
 RUN /steam/bin/steamcmd.sh +login anonymous +quit \
-		&& /steam/bin/steamcmd.sh +force_install_dir "/steam/gmod" +login anonymous +app_update 4020 validate +quit \
-		&& /steam/bin/steamcmd.sh +force_install_dir "/steam/css" +login anonymous +app_update 232330 validate +quit
+		&& /steam/bin/steamcmd.sh +force_install_dir "/steam/dst" +login anonymous +app_update 343050 validate +quit
 
-ADD ./mount.cfg /steam/gmod/garrysmod/cfg/mount.cfg
-ADD ./server.cfg /steam/gmod/garrysmod/cfg/server.cfg
+COPY ./configs/$CLUSTER/$SHARD /steam/dst_config
 
-CMD [ '/steam/gmod/srcds_run -console _game garrysmod +maxplayer 16 +map gm_construct +gamemode terrortown' ]
+WORKDIR /steam/dst/bin
+
+CMD [ './dontstarve_dedicated_server_nullrenderer -persistent_storage_root $DST_PATH -conf_dir $DST_CONFIG_DIR -cluster $CLUSTER -shard $SHARD' ]
+
 
